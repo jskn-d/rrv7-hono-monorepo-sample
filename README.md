@@ -16,3 +16,6 @@ Run the command.
 bun run --filter '*' dev
 ```
 
+## Deploy
+
+[Cloudflare Workers](https://www.cloudflare.com/ja-jp/developer-platform/products/workers/)
