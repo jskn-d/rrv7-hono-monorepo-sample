@@ -10,16 +10,24 @@ export function meta({}: Route.MetaArgs) {
 
 export async function loader({ context }: Route.LoaderArgs) {
   const res = await client.hello.$get();
+  const resUser = await client.users.$get();
   const hello = await res.json();
+  const users = await resUser.json();
   return {
-    hello: hello.message
+    hello: hello.message,
+    user: users[0],
   };
 }
 
 export default function Home({ loaderData }: Route.ComponentProps) {
   return (
-      <div>
-        {loaderData.hello}
-      </div>
+      <>
+        <div>
+          {loaderData.hello}
+        </div>
+        <h2>User</h2>
+        <p>{loaderData.user.name}</p>
+          <p>{loaderData.user.email}</p>
+      </>
   )
 }

@@ -16,80 +16,75 @@ app.use("*", cors({
   origin: "*"
 }));
 
-app.get("/hello", (c) => {
-  return c.json({ message: "Hello Hono!" })
-});
+const route = app
+    .get("/hello", (c) => {
+      return c.json({ message: "Hello Hono!" })
+    })
+    .get("/users", async (c) => {
+      const db = drizzle(c.env.DB)
+      const users = await db.select().from(usersTable).all();
 
-app.get("/users", async (c) => {
-  const db = drizzle(c.env.DB)
-  const users = await db.select().from(usersTable).all();
+      return c.json(users, 200);
+    })
+    .post("users", zValidator("json", createUserSchema), async (c) => {
+      const data = c.req.valid("json");
+      const db = drizzle(c.env.DB);
+      const parseData = await createUserSchema.parseAsync(data);
+      const newUser = await db
+          .insert(usersTable)
+          .values(parseData)
+          .returning()
+          .get();
+      return c.json(newUser, 201);
+    })
+    .get("/users/:id", zValidator("param", userIdSchema), async (c) => {
+        const param = c.req.valid("param");
+        const db = drizzle(c.env.DB);
+        const user = await db
+            .select()
+            .from(usersTable)
+            .where(eq(usersTable.id, Number(param.id)))
+            .get();
 
-  return c.json(users, 200);
-});
+        if (!user) {
+          return c.json({ message: "User not found" }, 404);
+        }
 
-app.post("users", zValidator("json", createUserSchema), async (c) => {
-  const data = c.req.valid("json");
-  const db = drizzle(c.env.DB);
-  const parseData = await createUserSchema.parseAsync(data);
-  const newUser = await db
-      .insert(usersTable)
-      .values(parseData)
-      .returning()
-      .get();
+        return c.json(user, 200);
+    })
+    .put("/users/:id", zValidator("param", userIdSchema), zValidator("json", createUserSchema), async (c) => {
+        const param = c.req.valid("param");
+        const data = c.req.valid("json");
+        const db = drizzle(c.env.DB);
+        const parseData = await createUserSchema.parseAsync(data);
+          const user = await db
+              .update(usersTable)
+              .set(parseData)
+              .where(eq(usersTable.id, Number(param.id)))
+              .returning()
+              .get();
 
-  return c.json(newUser, 201);
-});
+          if (!user) {
+              return c.json({ message: "User not found" }, 404);
+          }
 
-app.get("/users/:id", zValidator("param", userIdSchema), async (c) => {
-  const param = c.req.valid("param");
-  const db = drizzle(c.env.DB);
-  const user = await db
-      .select()
-      .from(usersTable)
-      .where(eq(usersTable.id, Number(param.id)))
-      .get();
+          return c.json(user, 200);
+      })
+    .delete("/users/:id", zValidator("param", userIdSchema), async (c) => {
+        const param = c.req.valid("param");
+        const db = drizzle(c.env.DB);
+        const user = await db
+            .delete(usersTable)
+            .where(eq(usersTable.id, Number(param.id)))
+            .returning()
+            .get();
 
-  if (!user) {
-    return c.json({ message: "User not found" }, 404);
-  }
+        if (!user) {
+          return c.json({ message: "User not found" }, 404);
+        }
 
-  return c.json(user, 200);
-});
+        return c.newResponse(null, { status: 204 });
+    });
 
-app.put("/users/:id", zValidator("param", userIdSchema), zValidator("json", createUserSchema), async (c) => {
-  const param = c.req.valid("param");
-  const data = c.req.valid("json");
-  const db = drizzle(c.env.DB);
-  const parseData = await createUserSchema.parseAsync(data);
-    const user = await db
-        .update(usersTable)
-        .set(parseData)
-        .where(eq(usersTable.id, Number(param.id)))
-        .returning()
-        .get();
-
-    if (!user) {
-        return c.json({ message: "User not found" }, 404);
-    }
-
-    return c.json(user, 200);
-});
-
-app.delete("/users/:id", zValidator("param", userIdSchema), async (c) => {
-  const param = c.req.valid("param");
-  const db = drizzle(c.env.DB);
-  const user = await db
-      .delete(usersTable)
-      .where(eq(usersTable.id, Number(param.id)))
-      .returning()
-      .get();
-
-  if (!user) {
-    return c.json({ message: "User not found" }, 404);
-  }
-
-  return c.newResponse(null, { status: 204 });
-});
-
-export type AppType = typeof app;
+export type AppType = typeof route;
 export default app;
