@@ -11,11 +11,14 @@ export function meta({}: Route.MetaArgs) {
 export async function loader({ context }: Route.LoaderArgs) {
   const res = await client.hello.$get();
   const resUser = await client.users.$get();
+  const resUserId = await client.users.$get({ id: 1 });
   const hello = await res.json();
   const users = await resUser.json();
+  const userById = await resUserId.json();
   return {
     hello: hello.message,
     user: users[0],
+    userById: userById[0],
   };
 }
 
@@ -27,7 +30,9 @@ export default function Home({ loaderData }: Route.ComponentProps) {
         </div>
         <h2>User</h2>
         <p>{loaderData.user.name}</p>
-          <p>{loaderData.user.email}</p>
+        <p>{loaderData.user.email}</p>
+        <h2>UserById</h2>
+        <p>{loaderData.userById.name}</p>
       </>
   )
 }
